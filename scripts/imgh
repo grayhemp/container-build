@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+#
+# A helper script for img (https://github.com/genuinetools/img)
+
+set -e -o pipefail
+
+: ${REGISTRY_USER:="$(id -un)"}
+
+: ${CACHE_TAGS:='master'}
+: ${NAMESPACE:="${REGISTRY_USER}"}
+: ${TAG:='master'}
+
+# Builds an image
+# Globals:
+#   CACHE_TAGS
+#   NAMESPACE
+#   TAG
+#   REGISTRY
+# Arguments:
+#   1: Image name
+#   2: Dockerfile. Optional, default `./build/container/${name}/Dockerfile`.
+#   3: Build context. Optional, default `./`.
+command_build() {
+  local name="${1?'Name must be specified'}"
+
+  local context="${3:-./}"
+  local dockerfile="${2:-./build/container/${name}/Dockerfile}"
+
+  local registry_namespace="${NAMESPACE}"
+  if [[ ! -z "${REGISTRY}" ]]; then
+    registry_namespace="${REGISTRY}/${registry_namespace}"
+  fi
+
+  local repository="${registry_namespace}/${name}"
+
+  local cache_from
+  for cache_tag in "${TAG}" ${CACHE_TAGS}; do
+    if [[ -z "$(img ls ${repository}:${cache_tag} | grep -v 'NAME')" ]]; then
+      img pull "${repository}:${cache_tag}" || true
+    fi
+  done
+
+  img build \
+    --build-arg REGISTRY_NAMESPACE="${registry_namespace}" \
+    --build-arg TAG="${TAG}" \
+    -t "${repository}:${TAG}" \
+    -f "${dockerfile}" \
+    "${context}"
+}
+
+# Pushes an image to the registry
+# Globals:
+#   NAMESPACE
+#   TAG
+#   REGISTRY
+#   REGISTRY_USER
+#   REGISTRY_PASSWORD: Either a file path or a password string
+# Arguments:
+#   1: Image name
+command_push() {
+  : ${REGISTRY_PASSWORD?'A File path or a password must be specified'}
+
+  local name="${1?Name must be specified}"
+
+  local registry_namespace="${NAMESPACE}"
+  if [[ ! -z "${REGISTRY}" ]]; then
+    registry_namespace="${REGISTRY}/${registry_namespace}"
+  fi
+
+  local repository="${registry_namespace}/${name}"
+
+  local password_arg
+  local password_stdin
+
+  if [[ ! -f "${REGISTRY_PASSWORD}" ]]; then
+    echo "${REGISTRY_PASSWORD}" > /run/container_registry_password
+    REGISTRY_PASSWORD=/run/container_registry_password
+  fi
+
+  img login \
+    -u "${REGISTRY_USER}" \
+    --password-stdin \
+    "${REGISTRY}" \
+    < ${REGISTRY_PASSWORD}
+
+  img push "${repository}:${TAG}"
+}
+
+main() {
+  "command_${1?Command must be specified}" "${@:2}"
+}
+
+main "$@"

@@ -1,0 +1,14 @@
+# At least REGISTRY_USER and REGISTRY_PASSWORD should be defined in
+# the Travis job settings
+
+language: bash
+services:
+  - docker
+script:
+  - make
+deploy:
+  provider: script
+  script:
+    - make push
+  on:
+    branch: master
