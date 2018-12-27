@@ -14,7 +14,7 @@ Use your favorite container runtime to run `grayhemp/build` (which is
 essentially this image) in a privileged mode (so far) with environment
 variables `REGISTRY_USER=<user>` and `export
 REGISTRY_PASSWORD=/run/password` mounting your build context as
-`/mnt/workspace`, registry password as `/run/password` and running
+`/mnt/workspace`, registry password as `/run/password`, and running
 
 ```bash
 make
