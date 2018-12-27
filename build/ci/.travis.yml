@@ -2,8 +2,6 @@
 # the Travis job settings
 
 language: minimal
-services:
-  - docker
 before_script:
   - |
     docker run -d \
