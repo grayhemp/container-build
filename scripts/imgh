@@ -43,6 +43,7 @@ command_build() {
   img build \
     --build-arg REGISTRY_NAMESPACE="${registry_namespace}" \
     --build-arg TAG="${TAG}" \
+    --no-console \
     -t "${repository}:${TAG}" \
     -f "${dockerfile}" \
     "${context}"
