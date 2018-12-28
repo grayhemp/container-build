@@ -4,9 +4,8 @@
 
 An image helping to build images.
 
-Under the hood it uses [img](https://github.com/genuinetools/img)
-wrapped with the [imgh] script simplifying and improving buld and
-login/push operations.
+Under the hood it uses [img] wrapped with the [imgh] script
+simplifying and improving buld and login/push operations.
 
 ## Usage
 
@@ -21,7 +20,7 @@ make
 make push
 ```
 
-assuming you have a `Makefile` in the root of your build context as
+assuming you have a Makefile in the root of your build context as
 [the one][Makefile] in this repo.
 
 To persist the build cache mount a persistent storage as
@@ -29,5 +28,6 @@ To persist the build cache mount a persistent storage as
 
 Please consult with the [Makefile] and [imgh] for more details.
 
+[img]: https://github.com/genuinetools/img
 [imgh]: scripts/imgh
 [Makefile]: Makefile

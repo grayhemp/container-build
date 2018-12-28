@@ -9,7 +9,8 @@ before_script:
       -e REGISTRY_PASSWORD=${REGISTRY_PASSWORD} \
       --name build \
       --privileged \
-      -v $(pwd):/mnt/workspace grayhemp/build:master \
+      -v $(pwd):/mnt/workspace \
+      grayhemp/build:master \
       sleep 300
 script:
   - docker exec -it build make
