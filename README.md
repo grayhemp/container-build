@@ -5,7 +5,7 @@
 An image helping to build images.
 
 Under the hood it uses [img] wrapped with the [imgh] script
-simplifying and improving buld and login/push operations.
+simplifying and improving build and login/push operations.
 
 ## Usage
 
