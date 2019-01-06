@@ -6,75 +6,71 @@ set -e -o pipefail
 
 : ${REGISTRY_USER:="$(id -un)"}
 
-# : ${CACHE_TAGS:='master'}
+: ${BUILD_TAG:='local'}
+# : ${CACHE_TAGS:='master latest'}
 : ${NAMESPACE:="${REGISTRY_USER}"}
-: ${TAG:='master'}
+: ${REGISTRY:=''}
+: ${REGISTRY_TAG:='master'}
 
 # Builds an image
 # Globals:
+#   BUILD_TAG
 # #  CACHE_TAGS
-#   NAMESPACE
-#   TAG
 #   REGISTRY
+#   REGISTRY_TAG
 # Arguments:
 #   1: Image name
 #   2: Dockerfile. Optional, default `./build/container/${name}/Dockerfile`.
+#      If is a directory then `$2/Dockerfile`.
 #   3: Build context. Optional, default `./`.
 command_build() {
   local name="${1?'Name must be specified'}"
 
   local context="${3:-./}"
   local dockerfile="${2:-./build/container/${name}/Dockerfile}"
-
-  local registry_namespace="${NAMESPACE}"
-  if [[ ! -z "${REGISTRY}" ]]; then
-    registry_namespace="${REGISTRY}/${registry_namespace}"
-  fi
-
+  local registry_namespace="$(_get_registry_namespace)"
   local repository="${registry_namespace}/${name}"
+
+  if [[ -d "${dockerfile}" ]]; then
+    dockerfile="${dockerfile}/Dockerfile"
+  fi
 
   # TODO Add cache pre-population when available
   # Waiting for https://github.com/genuinetools/img/issues/205
 
   # local cache_from
-  # for cache_tag in "${TAG}" ${CACHE_TAGS}; do
+  # for cache_tag in "${BUILD_TAG}" ${CACHE_TAGS}; do
   #   if [[ -z "$(img ls ${repository}:${cache_tag} | grep -v 'NAME')" ]]; then
   #     img pull "${repository}:${cache_tag}" || true
   #   fi
   # done
 
   img build \
+    --build-arg BUILD_TAG="${BUILD_TAG}" \
     --build-arg REGISTRY_NAMESPACE="${registry_namespace}" \
-    --build-arg TAG="${TAG}" \
+    --build-arg REGISTRY_TAG="${REGISTRY_TAG}" \
     --no-console \
-    -t "${repository}:${TAG}" \
+    -t "${repository}:${BUILD_TAG}" \
     -f "${dockerfile}" \
     "${context}"
 }
 
 # Pushes an image to the registry
 # Globals:
-#   NAMESPACE
-#   TAG
+#   BUILD_TAG
 #   REGISTRY
 #   REGISTRY_USER
-#   REGISTRY_PASSWORD: Either a file path or a password string
+#   REGISTRY_PASSWORD: Either a file path (preferable) or a password string
+#   REGISTRY_TAG
 # Arguments:
 #   1: Image name
 command_push() {
   : ${REGISTRY_PASSWORD?'A File path or a password must be specified'}
 
   local name="${1?Name must be specified}"
-
-  local registry_namespace="${NAMESPACE}"
-  if [[ ! -z "${REGISTRY}" ]]; then
-    registry_namespace="${REGISTRY}/${registry_namespace}"
-  fi
-
-  local repository="${registry_namespace}/${name}"
-
   local password_arg
   local password_stdin
+  local repository="$(_get_registry_namespace)/${name}"
 
   if [[ ! -f "${REGISTRY_PASSWORD}" ]]; then
     echo "${REGISTRY_PASSWORD}" > /run/container_registry_password
@@ -87,7 +83,24 @@ command_push() {
     "${REGISTRY}" \
     < ${REGISTRY_PASSWORD}
 
-  img push "${repository}:${TAG}"
+  img tag "${repository}:${BUILD_TAG}" "${repository}:${REGISTRY_TAG}"
+  img push "${repository}:${REGISTRY_TAG}"
+}
+
+# Builds a full registry namespace
+# Globals:
+#   NAMESPACE
+#   REGISTRY
+# Outputs:
+#   STDOUT: Registry namespace
+_get_registry_namespace() {
+  local registry_namespace="${NAMESPACE}"
+
+  if [[ ! -z "${REGISTRY}" ]]; then
+    registry_namespace="${REGISTRY}/${registry_namespace}"
+  fi
+
+  echo "${registry_namespace}"
 }
 
 main() {
